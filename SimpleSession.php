@@ -19,14 +19,14 @@ class SimpleSession {
 	 *
 	 * @var string
 	 */
-	protected $session_name;
+	protected $name;
 
 	/**
 	 * Unique ID of the current session.
 	 *
 	 * @var string
 	 */
-	protected $session_id;
+	protected $id;
 
 	/**
 	 * Unix timestamp when session expires.
@@ -50,22 +50,26 @@ class SimpleSession {
 	protected $dirty;
 
 	protected static $instances = array();
+	protected static $instance;
+
+	protected $cookie_path;
+	protected $cookie_domain;
 
 	/**
 	 * Makes and gets a session instance.
 	 *
-	 * @param bool $session_id Session ID from which to populate data.
+	 * @param bool $id Session ID from which to populate data.
 	 *
 	 * @return bool|SimpleSession
 	 */
 	public static function factory( array $config = array() )
 	{
-		if ( array_key_exists( 'key', $config ) ) {
-			$key = $config['key'];
-			if ( ! array_key_exists( $key, self::$instances ) ) {
-				self::$instances[ $key ] = new self( $key );
+		if ( array_key_exists( 'name', $config ) ) {
+			$name = $config['name'];
+			if ( ! array_key_exists( $name, self::$instances ) ) {
+				self::$instances[ $name ] = new self( $config );
 			}
-			return self::$instances[ $key ];
+			return self::$instances[ $name ];
 		}
 
 		if ( ! self::$instance ) {
@@ -99,18 +103,31 @@ class SimpleSession {
 	 * Will rebuild the session collection from the given session ID if it exists. Otherwise, will
 	 * create a new session with that ID.
 	 *
-	 * @param $session_id
+	 * @param $id
 	 * @uses apply_filters Calls `wp_session_expiration` to determine how long until sessions expire.
 	 */
-	protected function __construct( $session_name = 'simple' )
+	protected function __construct( array $config = array() )
 	{
-		$this->session_name = $session_name;
+		if ( array_key_exists( 'name', $config ) )
+			$this->name = $config['name'];
+		else
+			$this->name = 'simple';
 
-		if ( isset( $_COOKIE[ $session_name ] ) ) {
-			$cookie = stripslashes( $_COOKIE[ $session_name ] );
+		if ( array_key_exists( 'cookie_path', $config ) )
+			$this->cookie_path = $config['cookie_path'];
+		else
+			$this->cookie_path = COOKIEPATH;
+
+		if ( array_key_exists( 'cookie_domain', $config ) )
+			$this->cookie_domain = $config['cookie_domain'];
+		else
+			$this->cookie_domain = NULL;
+
+		if ( isset( $_COOKIE[ $this->name ] ) ) {
+			$cookie = stripslashes( $_COOKIE[ $this->name ] );
 			$cookie_crumbs = explode( '||', $cookie );
 
-			$this->session_id = $cookie_crumbs[0];
+			$this->id = $cookie_crumbs[0];
 			$this->expires = $cookie_crumbs[1];
 			$this->exp_variant = $cookie_crumbs[2];
 
@@ -122,7 +139,7 @@ class SimpleSession {
 				update_option( $this->exp_opt, $this->expires );
 			}
 		} else {
-			$this->session_id = $this->generate_id();
+			$this->id = $this->generate_id();
 			$this->make_opt_names();
 			$this->set_expiration();
 		}
@@ -164,7 +181,9 @@ class SimpleSession {
 	 */
 	protected function set_cookie()
 	{
-		setcookie( $this->session_name, $this->session_id . '||' . $this->expires . '||' . $this->exp_variant , $this->expires, COOKIEPATH, COOKIE_DOMAIN );
+
+		setcookie( $this->name, $this->id . '||' . $this->expires . '||' . $this->exp_variant,
+			$this->expires, $this->cookie_path, $this->cookie_domain );
 	}
 
 	/**
@@ -223,7 +242,7 @@ class SimpleSession {
 			delete_option( $this->opt_key);
 		}
 
-		$this->session_id = $this->generate_id();
+		$this->id = $this->generate_id();
 
 		$this->set_cookie();
 	}
@@ -255,8 +274,8 @@ class SimpleSession {
 
 	private function make_opt_names()
 	{
-			$this->opt_key = 'smplsess|'.$this->session_name.'|'.$this->session_id;
-			$this->exp_key = 'smplsess_expires|'.$this->session_name.'|'.$this->session_id;
+			$this->opt_key = 'smplsess|'.$this->name.'|'.$this->id;
+			$this->exp_key = 'smplsess_expires|'.$this->name.'|'.$this->id;
 	}
 
 }

@@ -11,7 +11,7 @@
  * License: GPLv2+
  */
 
-include 'class.SimpleSession.php';
+include 'SimpleSession.php';
 
 /**
  * Clean up expired sessions by removing data and their expiration entries from
