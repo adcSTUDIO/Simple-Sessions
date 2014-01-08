@@ -181,9 +181,13 @@ class SimpleSession {
 	 */
 	protected function set_cookie()
 	{
-
 		setcookie( $this->name, $this->id . '||' . $this->expires . '||' . $this->exp_variant,
 			$this->expires, $this->cookie_path, $this->cookie_domain );
+	}
+
+	protected function delete_cookie()
+	{
+		setcookie( $this->name, '', time()-42000, $this->cookie_path, $this->cookie_domain );
 	}
 
 	/**
@@ -270,6 +274,15 @@ class SimpleSession {
 	 */
 	public function reset() {
 		$this->container = array();
+
+	}
+
+	public function destroy() {
+		$this->reset();
+		$this->delete_cookie();
+		$this->expires = '';
+		$this->exp_key = '';
+		$this->opt_key = '';
 	}
 
 	private function make_opt_names()
